@@ -70,6 +70,28 @@ pip install -r requirements.txt
 
 ## 🚀 Training
 
+You must configure your local data paths before running the training.
+
+Open the configuration file: configs/pretrain_robomap_config.yaml.
+
+Locate the 1. PATH CONFIGURATION section.
+
+Modify data_root1 and data_root2 to point to the root directories where your datasets are stored locally.
+
+⚠️ Note: The script will fail immediately if these paths are not correctly set.
+
+We use PyTorch's torchrun for efficient multi-GPU distributed training. A launch script is provided to handle all settings for you.
+
+To start training, simply run:
+
+```bash
+bash pretrain_robomap.sh
+```
+
+This script will launch the training process on 4 GPUs (as defined by GPUS_PER_NODE=4 in the script), using the settings from configs/pretrain_robomap_config.yaml.
+
+All experiments are implemented in PyTorch and were conducted on 4x NVIDIA L40 (48G) GPUs. We finetune the model for 2 epochs, keeping the vision encoder and token embeddings frozen. We use the AdamW optimizer with $\beta_1 = 0.9$, $\beta_2 = 0.999$, and a weight decay of 0.1. The learning rate warms up linearly to a peak of $3 \times 10^{-5}$ over the first 400 steps, followed by a cosine decay schedule. Training is performed with a global batch size of 384 using BF16 mixed precision, and the full process takes approximately 20 hours.
+
 ## 🧪 Inference
 
 > **Note on Pre-trained Models**
