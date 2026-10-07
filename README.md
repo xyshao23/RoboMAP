@@ -9,7 +9,7 @@
 ## 🔥 News
 [2026.10] 🎉 RoboMAP has been accepted to CoRL 2026 as a Poster.
 
-[2026.10] 📄 The project has been updated with the camera-ready title and results. The work was previously titled *More than A Point: Capturing Uncertainty with Adaptive Affordance Heatmaps for Spatial Grounding in Robotic Tasks*.
+[2026.10] 📄 The project has been updated with the latest title and results. The work was previously titled *More than A Point: Capturing Uncertainty with Adaptive Affordance Heatmaps for Spatial Grounding in Robotic Tasks*.
 
 ## Abstract
 
