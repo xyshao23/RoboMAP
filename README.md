@@ -11,9 +11,9 @@
 
 [2026.10] 📄 The project has been updated with the latest title and results. The work was previously titled *More than A Point: Capturing Uncertainty with Adaptive Affordance Heatmaps for Spatial Grounding in Robotic Tasks*.
 
-[2025.10] 🚀 RoboMAP 发布！开源了论文、代码和 Demo。
+[2025.10] 🚀 RoboMAP was released with the paper, code, and demo.
 
-[2025.10] 📄 论文 *More than A Point: Capturing Uncertainty with Adaptive Affordance Heatmaps for Spatial Grounding in Robotic Tasks* 已发布：[arXiv:2510.10912](https://arxiv.org/abs/2510.10912)。
+[2025.10] 📄 The paper, *More than A Point: Capturing Uncertainty with Adaptive Affordance Heatmaps for Spatial Grounding in Robotic Tasks*, was released on [arXiv:2510.10912](https://arxiv.org/abs/2510.10912).
 
 ## Abstract
 
