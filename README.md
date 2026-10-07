@@ -1,15 +1,19 @@
 <div align="center">
 
-# RoboMAP: Capturing Uncertainty with Adaptive Affordance Heatmaps for Spatial Grounding in Robotic Tasks
+# RoboMAP: More than a Point: Adaptive Affordance Heatmaps as VLM Grounding Interfaces for Robotics
 
 [\[📄Paper\]](https://arxiv.org/abs/2510.10912)  [\[🏠Project Page\]](https://robo-map.github.io/)  [\[📹Video\]](https://www.youtube.com/watch?v=zfFt_MJnt4Y&embeds_referring_euri=https%3A%2F%2Frobo-map.github.io%2F&source_ve_path=OTY3MTQ&themeRefresh=1)
 
 </div>
 
 ## 🔥 News
-[2025.10] 🚀 RoboMAP发布！开源了论文、代码和Demo。
+[2026.10] 🎉 RoboMAP has been accepted to CoRL 2026 as a Poster.
 
-[2025.10] 📄 论文 More than A Point: Capturing Uncertainty with Adaptive Affordance Heatmaps for Spatial Grounding in Robotic Tasks (https://arxiv.org/abs/2510.10912) 已发布。
+[2026.10] 📄 The project has been updated with the camera-ready title and results. The work was previously titled *More than A Point: Capturing Uncertainty with Adaptive Affordance Heatmaps for Spatial Grounding in Robotic Tasks*.
+
+## Abstract
+
+Hierarchical VLM-based robotic systems often use sparse points or bounding boxes as intermediate spatial representations, which are inadequate for region-level grounding. This is particularly evident in instructions such as “place near the bowl,” which specify a feasible region rather than a single target point. We present RoboMAP, a VLM-based robotic grounding framework that uses adaptive affordance heatmaps as a language-conditioned intermediate interface between spatial reasoning and downstream modules. RoboMAP predicts dense score maps for continuous and object-free target regions, exposing feasible spatial support that downstream segmentation, grasping, and control modules can use beyond sparse prompts alone. To enable scalable training without manual dense labels, RoboMAP synthesizes heatmap supervision from heterogeneous annotations, including points, boxes, and robot trajectory data. Across four spatial grounding benchmarks evaluated with standard point-extraction metrics, RoboMAP obtains the best reported accuracy on three benchmarks while maintaining a 0.04 s grounding-stage forward pass. In 50 real-world dual-arm manipulation trials spanning five tabletop task types, it achieves an 82% success rate using heatmap-guided segmentation and grasp proposal. We further provide qualitative cross-embodiment demonstrations across manipulation and navigation scenarios.
 
 ## 🎯 Why RoboMAP?
 
@@ -17,16 +21,18 @@
 
 🎯 Uncertainty-Aware: Enables robots to explicitly capture and understand complex spatial concepts. When a command is ambiguous (e.g., "the cup nearby"), the heatmap naturally broadens to express uncertainty, enhancing the robustness of robot decision-making.
 
-⚡️ Real-time Performance: Achieves exceptional computational efficiency. Inference time is only 0.04 seconds (reaching 25Hz), which is over 50x faster than advanced baseline models, enabling real-time robotic reasoning.
+⚡️ Efficient Grounding: The VLM grounding-stage forward pass takes only 0.04 seconds. This measurement excludes downstream perception and execution, so it should not be interpreted as end-to-end robot control latency.
 
 ![](./assets/teaser-2.jpg)
 
 ## Contents
+- [Abstract](#abstract)
 - [Model Overview](#Model-Overview)
 - [Installation](#Installation)
 - [Training](#Training)
 - [Evaluation](#evaluation)
 - [Experimental Results](#experimental-results)
+- [Checkpoint Availability](#checkpoint-availability)
 - [Acknowledgement](#Acknowledgement)
 - [Contact](#Contact)
 - [Citation](#Citation)
@@ -39,10 +45,9 @@ The RoboMAP framework (Fig. 1) first uses a vision-language backbone (PaliGemma)
 
 ## 🛠️ Installation
 
-### 1. Prerequisites: Access Paligemma
+### 1. Prerequisites: Access PaliGemma
 
-Our model is built upon Paligemma [google/paligemma-3b-pt-224](https://huggingface.co/google/paligemma-3b-pt-224), which is a gated repository on Hugging Face.
-Therefore, you should first be authenticated to access it.
+Our model is built upon [PaliGemma](https://huggingface.co/google/paligemma-3b-pt-224), which is a gated repository on Hugging Face. You should first authenticate with Hugging Face and request access to the checkpoint.
 
 ### 2. Clone Repository
 
@@ -72,7 +77,7 @@ pip install -r requirements.txt
 
 You must configure your local data paths before running the training.
 
-Open the configuration file: configs/pretrain_robomap_config.yaml.
+Open the configuration file: `config/pretrain_robomap_config.yaml`.
 
 Locate the 1. PATH CONFIGURATION section.
 
@@ -88,34 +93,13 @@ To start training, simply run:
 bash pretrain_robomap.sh
 ```
 
-This script will launch the training process on 4 GPUs (as defined by GPUS_PER_NODE=4 in the script), using the settings from configs/pretrain_robomap_config.yaml.
+This script will launch the training process on 4 GPUs (as defined by `GPUS_PER_NODE=4` in the script), using the settings from `config/pretrain_robomap_config.yaml`.
 
 All experiments are implemented in PyTorch and were conducted on 4x NVIDIA L40 (48G) GPUs. We finetune the model for 2 epochs, keeping the vision encoder and token embeddings frozen. We use the AdamW optimizer with $\beta_1 = 0.9$, $\beta_2 = 0.999$, and a weight decay of 0.1. The learning rate warms up linearly to a peak of $3 \times 10^{-5}$ over the first 400 steps, followed by a cosine decay schedule. Training is performed with a global batch size of 384 using BF16 mixed precision, and the full process takes approximately 20 hours.
 
 ## 🧪 Inference
 
-> **Note on Pre-trained Models**
-> 
-> Due to permission restrictions, we are unable to release the pre-trained model checkpoints at this time.
-> 
-> However, we provide the full code for **data synthesis** and **inference**. You can easily train your own model by following the [**🚀 Training**](#-training) section and then use the scripts below to run inference.
-
-### 1. Train Your Model
-
-Before you can run inference, you must first train your own model. Please follow the steps outlined in the [**🚀 Training**](#-training) section to generate your own model.
-
-### 2. Run Inference
-
-Once you have a trained checkpoint, you can use our provided `inference.py` script to generate results (e.g., affordance heatmaps) for new inputs.
-
-```bash
-# Example command to run inference on a single image
-python inference.py \
-    --model_path path/to/your/checkpoint.pth \
-    --image_path /path/to/your/image.jpg \
-    --instruction "your language instruction here" \
-    --output_path /path/to/save/heatmap.png
-```
+Pre-trained checkpoints and a standalone inference script are not currently included because of release and permission constraints. The repository currently focuses on the training and model implementation. After training a checkpoint, the model and pipeline components in `robomap/model.py` and `robomap/pipeline.py` can be used to integrate RoboMAP into a downstream application.
 
 ## 📈 Experimental Results
 
@@ -123,11 +107,11 @@ python inference.py \
 
 We benchmarked RoboMAP against both general-purpose VLMs (like GPT-4o and Gemini-2.5-pro) and leading specialized robotic grounding models.
 
-As the results show, **RoboMAP achieves new state-of-the-art (SOTA) performance** on three of the four key benchmarks: `Where2place` (73.00%), `RoboRefIt` (88.73%), and `VABench-Point` (70.00%), while achieving a **highly competitive** second-place result on `RefSpatial`.
+As the results show, **RoboMAP achieves the best reported accuracy on three of the four key benchmarks**: `Where2place` (73.00%), `RoboRefIt` (88.73%), and `VABench-Point` (70.00%), while remaining competitive on `RefSpatial`.
 
-Crucially, this SOTA accuracy is achieved with unparalleled efficiency. With an inference time of just **0.04 seconds (25Hz)**, RoboMAP is over **50 times faster** than other top-performing specialized models like Embodied-R1 (2.18s). This unique combination of high accuracy and real-time capability makes RoboMAP highly effective for practical, on-robot deployment.
+The reported **0.04-second timing measures only the VLM grounding-stage forward pass**; downstream perception and execution are excluded. This distinction is important when comparing the timing with complete robotic systems.
 
-| Model | Size | Finetune Method | Where2place (%) ↑ | RoboRefIt (%) ↑ | RefSpatial (%) ↑ | VABench-Point (%) ↑ | Inference Time (s) ↓ |
+| Model | Size | Finetune Method | Where2place (%) ↑ | RoboRefIt (%) ↑ | RefSpatial (%) ↑ | VABench-Point (%) ↑ | Grounding-stage Time (s) ↓ |
 |:---|:---|:---|:---:|:---:|:---:|:---:|:---:|
 | GPT-4o | - | - | 23.04 | 15.28 | 9.12 | 16.59 | - |
 | Gemini-2.5-pro | - | - | 52.95 | 49.50 | 29.24 | 21.71 | - |
@@ -140,7 +124,7 @@ Crucially, this SOTA accuracy is achieved with unparalleled efficiency. With an 
 | FSD | 13B | SFT | 45.81 | 56.73 | 14.90 | 61.82 | 15.68 |
 | Embodied-R1 | 3B | SFT + RFT | *69.50* | *85.58* | **38.46** | *66.00* | 2.18 |
 | BridgeVLA-pretrain | 3B | SFT | 15.00 | 26.25 | 11.50 | 10.50 | *0.06* |
-| **RoboMAP** | **3B** | **SFT** | **73.00** | **88.73** | ***36.50*** | **70.00** | **0.04** |
+| **RoboMAP** | **3B** | **SFT** | **73.00** | **88.73** | *36.50* | **70.00** | **0.04** |
 
 ![](./assets/benchmark.png)
 
@@ -148,9 +132,9 @@ Crucially, this SOTA accuracy is achieved with unparalleled efficiency. With an 
 
 This table shows the **zero-shot evaluation in the SimplerEnv simulation** using a WidowX robot. We compared RoboMAP against both VLA-based methods (like OpenVLA, $\pi_0$) and other VLM-based methods (like MOKA, Embodied-R1).
 
-Even with no prior training in this environment, **RoboMAP achieves the highest overall success rate (60.5%)**. It outperforms all other methods, including strong specialized VLA models like $\pi_0$ FAST (32.1%) and VLM baselines like Embodied-R1 (56.2%).
+Even with no prior training in this environment, **RoboMAP achieves the highest reported overall success rate (60.5%)**. It outperforms all other methods, including strong specialized VLA models like $\pi_0$ FAST (32.1%) and VLM baselines like Embodied-R1 (56.2%).
 
-This demonstrates RoboMAP's strong generalization capabilities in a dynamic simulation environment, successfully handling tasks where it achieved SOTA performance (`Spoon->Towel` and `Eggplant->Basket`).
+This demonstrates RoboMAP's strong generalization capabilities in a dynamic simulation environment, with its strongest task-level results on `Spoon->Towel` and `Eggplant->Basket`.
 
 | Model | Spoon$\rightarrow$Towel | Carrot$\rightarrow$Plate | Green$\rightarrow$Yellow | Eggplant$\rightarrow$Basket | Success Rate (%) |
 |:---|:---:|:---:|:---:|:---:|:---:|
@@ -167,13 +151,13 @@ This demonstrates RoboMAP's strong generalization capabilities in a dynamic simu
 ![](./assets/simplerenv.png)
 
 ### Generalization to Real World
-To validate the practical utility of RoboMAP, we evaluated its **zero-shot generalization performance** on a real-world robotic arm setup. The robot was tasked with executing complex spatial commands it had never seen during training.
+To validate the practical utility of RoboMAP, we evaluated its **zero-shot generalization performance** in 50 real-world dual-arm manipulation trials spanning five tabletop task types. The robot was tasked with executing complex spatial commands it had never seen during training.
 
-As shown in the table, **RoboMAP achieves the highest overall success rate of 82%**, significantly outperforming specialized baselines like RoboBrain2.0. It demonstrates robust performance across a variety of challenging, ambiguous, and long-horizon tasks.
+As shown in the table, **RoboMAP achieves 41/50 successes (82%)**, outperforming the compared baselines and demonstrating robust performance across challenging, ambiguous, and long-horizon tasks.
 
-Critically, it performs these real-world tasks while maintaining its **real-time inference speed of 0.04s**, confirming its readiness for deployment on physical systems.
+The reported **0.04-second timing refers to the grounding stage only**; it does not include downstream perception or robot execution.
 
-| Method | Place [A] on [B] | Move [A] beside [B] | Move [A] to [B] | Place [A] rel. to [B] | Place [A] into empty [B] | Success Rate (%) | Speed (s) |
+| Method | Place [A] on [B] | Move [A] beside [B] | Move [A] to [B] | Place [A] rel. to [B] | Place [A] into empty [B] | Success Rate (%) | Grounding-stage Time (s) |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | FSD | 2/10 | 3/10 | 4/10 | 4/10 | 1/10 | 28% | 15.68 |
 | RoboBrain2.0-3B | 5/10 | *7/10* | *7/10* | **7/10** | *7/10* | *66%* | *0.45* |
@@ -182,16 +166,16 @@ Critically, it performs these real-world tasks while maintaining its **real-time
 
 ![](./assets/realworld.png)
 
-## 📅 TODO 
+## 📦 Checkpoint Availability
 
-- [x] Release the checkpoint.
+Pre-trained checkpoints are not currently included because of release and permission constraints. Please follow the training instructions above to train a checkpoint locally.
 
 
 </details>
 
 ## 🙏 Acknowledgement
 We stand on the shoulders of giants, and our work in developing RoboMAP has been inspired and empowered by the remarkable open source projects in the field. We would like to extend our heartfelt gratitude to each of these initiatives and their dedicated developers.
-- [Palligemma](https://huggingface.co/blog/paligemma)
+- [PaliGemma](https://huggingface.co/google/paligemma-3b-pt-224)
 - [RLBench](https://github.com/stepjam/RLBench/tree/master)
 - [RoboPoint](https://github.com/wentaoyuan/RoboPoint)
 - [BridgeVLA](https://github.com/BridgeVLA/BridgeVLA)
@@ -201,12 +185,12 @@ If you have any questions about the code, please contact shaoxy23@mails.tsinghua
 
 ## 📝 Citation
 ```bibtex
-@article{shao2025more,
-  title={More than A Point: Capturing Uncertainty with Adaptive Affordance Heatmaps for Spatial Grounding in Robotic Tasks},
-  author={Shao, Xinyu and Tang, Yanzhe and Xie, Pengwei and Zhou, Kaiwen and Zhuang, Yuzheng and Quan, Xingyue and Hao, Jianye and Zeng, Long and Li, Xiu},
-  journal={arXiv preprint arXiv:2510.10912},
-  year={2025}
+@misc{shao2026robomap,
+  title = {More than a Point: Adaptive Affordance Heatmaps as VLM Grounding Interfaces for Robotics},
+  author = {Shao, Xinyu and Tang, Yanzhe and Xie, Pengwei and Zeng, Long and Li, Xiu},
+  year = {2026},
+  howpublished = {arXiv preprint arXiv:2510.10912},
+  note = {Accepted to CoRL 2026, Poster},
+  url = {https://arxiv.org/abs/2510.10912}
 }
 ```
-
-
