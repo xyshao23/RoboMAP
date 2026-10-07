@@ -187,8 +187,8 @@ class RoboMAP_Paligemma(PaliGemmaForConditionalGeneration):
         upsample_method = getattr(config, 'upsample_method', 'convex') # Default to 'convex'
         
         if upsample_method == 'convex':
-            # Read bottleneck_dim from config, default to 512
-            bottleneck_dim = getattr(config, 'bottleneck_dim', 512)
+            # Read bottleneck_dim from config, default to the camera-ready value.
+            bottleneck_dim = getattr(config, 'bottleneck_dim', 128)
             print(f"[RoboMAP_Paligemma] Initializing AdaptiveHeatmapDecoder "
                   f"(bottleneck_dim={bottleneck_dim}).")
             

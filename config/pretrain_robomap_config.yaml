@@ -1,108 +1,89 @@
 # ===================================================================
-#                      Configuration Template
+# Configuration Template
 # ===================================================================
 #
 # This is a configuration template for the RoboMAP project.
 #
 # --- HOW TO USE ---
 # 1. Copy this file to a new file (e.g., `my_config.yaml`).
-# 2. **CRITICAL:** Modify all paths in Section 1 to match your
-#    local environment.
+# 2. Modify all paths in Section 1 to match your local environment.
 # 3. Adjust hyperparameters in Section 3 as needed for your experiment.
-# 4. Run the script pointing to your new config file:
-#    python main.py --mode pretrain --config_path my_config.yaml
+# 4. Run the script pointing to your new config file.
 #
 # ===================================================================
-
 
 # ===================================================================
 # 1. PATH CONFIGURATION (!!! MUST BE MODIFIED !!!)
 # ===================================================================
-# These paths MUST be updated to point to your local machine's
-# directories.
 
 # --- A. Dataset Root ---
-# Set the global root directory where all your datasets are stored.
-# The `{data_root}` placeholder in Section 2 will be replaced by this value.
 data_root1: "/mnt/diskc/shaoxy/robodata"
 data_root2: "/mnt/diskc/tangyz/Heatmap_generation/heatmap/Heatmap_Pipeline/output"
 
 # --- B. Output & Checkpoint Paths ---
-# Specify where to save models, logs, and evaluation results.
-# You can use absolute paths or relative paths (e.g., ./outputs).
 output_dir: /mnt/diskc/shaoxy/robodata/ablation
 checkpoint_dir: /mnt/diskc/shaoxy/robodata/checkpoints
 test_save_path: /mnt/diskc/shaoxy/robodata/test
 
-
 # ===================================================================
 # 2. DATA SOURCE DEFINITIONS
 # ===================================================================
-# Define all available data sources. The training script will
-# load data from these paths based on the `sampling_config` below.
-#
-# The `{data_root}` placeholder is automatically replaced by the
-# `data_root` value from Section 1.
-#
-data_paths:
-  robodata:
-    json_path: "{data_root1}/robodata/object_ref_processed.json"
-    image_root: "{data_root1}/robodata"
-  coco:
-    json_path: "{data_root1}/coco_bridgevla/pretrain_data/detection_data.json"
-    image_root: "{data_root1}/coco_bridgevla"
-  oxe:
-    json_path: "{data_root2}/fractal20220817_data/fractal20220817_data_point_sequential_processed.json"
-    image_root: "{data_root2}/fractal20220817_data"
-  a_roborefit:
-    json_path: "{data_root2}/roborefit/roborefit_point_sequential_processed.json"
-    image_root: "{data_root2}/roborefit"
 
+data_paths:
+  robodata:
+    json_path: "{data_root1}/robodata/object_ref_processed.json"
+    image_root: "{data_root1}/robodata"
+  coco:
+    json_path: "{data_root1}/coco_bridgevla/pretrain_data/detection_data.json"
+    image_root: "{data_root1}/coco_bridgevla"
+  oxe:
+    json_path: "{data_root2}/fractal20220817_data/fractal20220817_data_point_sequential_processed.json"
+    image_root: "{data_root2}/fractal20220817_data"
+  a_roborefit:
+    json_path: "{data_root2}/roborefit/roborefit_point_sequential_processed.json"
+    image_root: "{data_root2}/roborefit"
 
 # ===================================================================
 # 3. MODEL & EXPERIMENT HYPERPARAMETERS
 # ===================================================================
 
 # --- A. Model Architecture ---
-loss_type: "ce"                  # Loss function type (e.g., "ce" for CrossEntropy, "sigmoid")
-upsample_method: "ahd"           # Method for upsampling heatmaps
-bottleneck_dim: 512              # Dimension of the model's bottleneck layer
+loss_type: "ce"              # Loss function type (e.g., "ce" for CrossEntropy, "sigmoid")
+upsample_method: "ahd"       # Adaptive heatmap decoder used by RoboMAP
+bottleneck_dim: 128           # Camera-ready AHD bottleneck dimension
 
 # --- B. Data Sampling & Mixing ---
-# Defines the mixing ratio for different data sources during training.
-# The keys (e.g., 'robodata', 'coco') must match the keys in `data_paths`.
-# The ratios will be normalized and used for weighted sampling.
 sampling_config:
-  robodata:
-    flags: 
-      - 'detection_0'
-    ratio: 0.4
-  coco:
-    flags:
-      - 'detection_1'
-      - 'detection_2'
-    ratio: 0.1
-  oxe:
-    flags:
-      - 'oxe_action_points'
-    ratio: 0.4
-  a_roborefit:
-    flags: 
-      - 'roborefit'
-    ratio: 0.1
+  robodata:
+    flags:
+      - 'detection_0'
+    ratio: 0.4
+  coco:
+    flags:
+      - 'detection_1'
+      - 'detection_2'
+    ratio: 0.1
+  oxe:
+    flags:
+      - 'oxe_action_points'
+    ratio: 0.4
+  a_roborefit:
+    flags:
+      - 'roborefit'
+    ratio: 0.1
 
 # --- C. Training Configuration ---
-exp_name: test  # A descriptive name for this experiment
-bs: 48                             # Total batch size (across all GPUs)
-lr: 3e-5                           # Peak learning rate
-num_train_epochs: 2                # Total number of training epochs
-gradient_accumulation_steps: 2     # Accumulate gradients over N steps (effective_bs = bs * steps)
-warmup_steps: 400                  # Number of linear warmup steps for the learning rate scheduler
-epoch_ratio: 2.0                   # Multiplier for dataset length per epoch (e.g., 2.0 = 2x data per epoch)
+exp_name: test
+bs: 48                         # Per-device batch size; 4 GPUs x 2 accumulation = 384 global batch
+lr: 3e-5                       # Peak learning rate
+num_train_epochs: 2            # Total number of training epochs
+gradient_accumulation_steps: 2
+warmup_steps: 400              # Number of linear warmup steps
+epoch_ratio: 2.0               # Dataset-length multiplier per epoch
 
 # --- D. Logging & Saving ---
-logging_steps: 10                  # Log training loss every N steps
-visualization_steps: 500           # (If applicable) Log visualizations every N steps
-save_steps: 1000                   # Save a checkpoint every N steps
-save_total_limit: 30               # Maximum number of checkpoints to keep (deletes older ones)
-dataloader_num_workers: 8          # Number of CPU workers for data loading
+logging_steps: 10
+visualization_steps: 500
+save_steps: 1000
+save_total_limit: 30
+dataloader_num_workers: 8

@@ -32,7 +32,7 @@ if __name__ == "__main__":
         "--config_path",
         type=str,
         required=True,
-        help="Path to the training configuration YAML file (e.g., configs/config.example.yaml)"
+        help="Path to the training configuration YAML file (e.g., config/pretrain_robomap_config.yaml)"
     )
     parser.add_argument(
         "--branches",

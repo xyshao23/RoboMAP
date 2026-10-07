@@ -8,11 +8,12 @@ from typing import List, Dict, Any
 # --- 2. Third-Party Imports ---
 import torch
 from torch.utils.data import WeightedRandomSampler
-from transformers import TrainingArguments, AutoProcessor
+from transformers import TrainingArguments, AutoProcessor, AutoConfig
 
 # --- 3. Local (robomap) Imports ---
 # Import models, datasets, and utils from other files in this package
 from .model import RoboMAP_Paligemma
+from .configuration import apply_robomap_model_config
 from .dataset import RoboMAPDataset, DataCollator
 from .utils import (
     load_all_params,
@@ -63,9 +64,7 @@ class Pretrain_RoboMAP_Palligemma:
                 raise ValueError("'checkpoint_dir' not specified in config for inference mode.")
 
             print(f"[Inference Mode] Loading base model: {self.base_model_id}")
-            self.pretrained_model = RoboMAP_Paligemma.from_pretrained(
-                self.base_model_id, trust_remote_code=True
-            )
+            self.pretrained_model = self._load_model()
             
             print(f"[Inference Mode] Loading and applying fine-tuned weights from: {checkpoint_path}")
             all_params = load_all_params(checkpoint_path)
@@ -79,6 +78,19 @@ class Pretrain_RoboMAP_Palligemma:
             
             self.pretrained_model.to(self.device)
             print("[Inference Mode] Model ready.")
+
+    def _load_model(self, **kwargs):
+        """Load the base model with the experiment decoder configuration."""
+        model_config = AutoConfig.from_pretrained(
+            self.base_model_id, trust_remote_code=True
+        )
+        apply_robomap_model_config(model_config, self.config)
+        return RoboMAP_Paligemma.from_pretrained(
+            self.base_model_id,
+            config=model_config,
+            trust_remote_code=True,
+            **kwargs,
+        )
 
     # (You removed 'test_inference' in your last prompt, so it is omitted here)
 
@@ -202,10 +214,8 @@ class Pretrain_RoboMAP_Palligemma:
 
         # --- 3. Load Model ---
         print(f"\n--- [Step 1] Loading full model architecture and weights from base: {self.base_model_id} ---")
-        model = RoboMAP_Paligemma.from_pretrained(
-            self.base_model_id,
+        model = self._load_model(
             torch_dtype=torch.bfloat16,
-            trust_remote_code=True # Required for custom RoboMAP_Paligemma class
         )
         print("--- Base model loaded successfully ---")
 
