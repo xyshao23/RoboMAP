@@ -25,8 +25,8 @@ def generate_hm_from_pt(pt, res, sigma, thres_sigma_times=3):
     thres are made 0
     :type pt: torch.FloatTensor of size (num_pt, 2)
     :type res: int or (int, int)
-    :param sigma: the std of the gaussian distribition. if it is -1, we
-        generate a hm with one hot vector
+    :param sigma: scalar standard deviation, or ``(sigma_x, sigma_y)`` for
+        an anisotropic Gaussian. If it is -1, generate a one-hot heatmap.
     :type sigma: float
     :type thres: float
     """
@@ -46,7 +46,14 @@ def generate_hm_from_pt(pt, res, sigma, thres_sigma_times=3):
     hm = hm.view([1, resx, resy, 2]).repeat(num_pt, 1, 1, 1)
 
     pt = pt.view([num_pt, 1, 1, 2])
-    hm = torch.exp(-1 * torch.sum((hm - pt) ** 2, -1) / (2 * (sigma**2)))
+    if isinstance(sigma, (tuple, list)):
+        sigma_tensor = torch.tensor(
+            sigma, dtype=hm.dtype, device=hm.device
+        ).view(1, 1, 1, 2)
+        normalized_distance = (hm - pt) / sigma_tensor
+        hm = torch.exp(-0.5 * torch.sum(normalized_distance**2, -1))
+    else:
+        hm = torch.exp(-1 * torch.sum((hm - pt) ** 2, -1) / (2 * (sigma**2)))
     thres = np.exp(-1 * (thres_sigma_times**2) / 2)
     hm[hm < thres] = 0.0
 

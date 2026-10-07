@@ -15,6 +15,7 @@ from PIL import Image
 from sklearn.model_selection import train_test_split
 from transformers import AutoProcessor
 
+from .label_utils import shape_aware_sigmas
 from .utils import generate_hm_from_pt
 
 class RoboMAPDataset(Dataset):
@@ -404,6 +405,70 @@ class RoboMAPDataset(Dataset):
             # print(f"Unknown flag '{flag}' in _parse_coordinates.")
             return []
 
+    def _parse_heatmap_annotations(self, gt_answer_str: str, flag: str) -> list:
+        """Parse centers together with the Gaussian shape for supervision.
+
+        Point-like annotations retain the isotropic ``sigma=2`` target used
+        in the paper. COCO bounding boxes additionally carry an anisotropic
+        ``(sigma_x, sigma_y)`` computed from their aspect ratio.
+        """
+        points = self._parse_coordinates(gt_answer_str, flag)
+        if not points:
+            return []
+
+        isotropic_annotations = [
+            {"point": [float(point[0]), float(point[1])], "sigma": (2.0, 2.0)}
+            for point in points
+        ]
+
+        try:
+            raw_coords = ast.literal_eval(gt_answer_str)
+        except (ValueError, SyntaxError):
+            return []
+
+        if flag == "detection_1":
+            box_coords = (
+                raw_coords[0]
+                if raw_coords and isinstance(raw_coords[0], (list, tuple))
+                else raw_coords
+            )
+            if (
+                not isinstance(box_coords, (list, tuple))
+                or len(box_coords) != 4
+                or not all(isinstance(value, (int, float)) for value in box_coords)
+            ):
+                return []
+
+            xmin, ymin, xmax, ymax = box_coords
+            try:
+                sigma = shape_aware_sigmas(xmax - xmin, ymax - ymin)
+            except ValueError:
+                return []
+            isotropic_annotations[0]["sigma"] = sigma
+            return isotropic_annotations[:1]
+
+        if flag == "detection_2":
+            annotations = []
+            for item in raw_coords:
+                if (
+                    not isinstance(item, (list, tuple))
+                    or len(item) != 4
+                    or not all(isinstance(value, (int, float)) for value in item)
+                ):
+                    continue
+
+                x, y, width, height = item
+                if not (0 <= x <= 1 and 0 <= y <= 1):
+                    continue
+                try:
+                    sigma = shape_aware_sigmas(width, height)
+                except ValueError:
+                    continue
+                annotations.append({"point": [float(x), float(y)], "sigma": sigma})
+            return annotations
+
+        return isotropic_annotations
+
     def __len__(self):
         return len(self.samples)
     
@@ -425,21 +490,23 @@ class RoboMAPDataset(Dataset):
         h, w = 224, 224 # Target model input size
 
         try:
-            points_list_raw = self._parse_coordinates(sample_info["raw_label"], sample_info["flag"])
+            annotations = self._parse_heatmap_annotations(
+                sample_info["raw_label"], sample_info["flag"]
+            )
         except Exception:
-            points_list_raw = [] # Fail-safe
+            annotations = [] # Fail-safe
 
-        points_list_normalized = []
-        if points_list_raw:
+        points_list_final = []
+        sigmas_final = []
+        for annotation in annotations:
+            point = annotation["point"]
             if sample_info["flag"] in ['oxe_action_points', 'roborefit']:
-                # This is where PIXEL coordinates are normalized
-                points_list_normalized = [[p[0] / W, p[1] / H] for p in points_list_raw]
-            else:
-                # Coordinates are already normalized
-                points_list_normalized = points_list_raw
-        
-        # Final filtering to ensure all points are within [0, 1] bounds
-        points_list_final = [p for p in points_list_normalized if 0 <= p[0] <= 1 and 0 <= p[1] <= 1]
+                # Pixel coordinates are normalized against the source image.
+                point = [point[0] / W, point[1] / H]
+
+            if 0 <= point[0] <= 1 and 0 <= point[1] <= 1:
+                points_list_final.append(point)
+                sigmas_final.append(annotation["sigma"])
 
         if not points_list_final:
             # No valid points, return empty heatmap and tensor
@@ -450,14 +517,17 @@ class RoboMAPDataset(Dataset):
             points_tensor = torch.tensor(points_list_final, dtype=torch.float32)
             # Scale normalized points to target resolution (224x224)
             points_scaled = points_tensor * torch.tensor([w, h], dtype=torch.float32)
-            
-            all_heatmaps = generate_hm_from_pt(
-                points_scaled, 
-                res=(w, h),
-                sigma=2
-            )
+
+            all_heatmaps = [
+                generate_hm_from_pt(
+                    point.unsqueeze(0),
+                    res=(w, h),
+                    sigma=sigma,
+                )[0]
+                for point, sigma in zip(points_scaled, sigmas_final)
+            ]
             # Combine heatmaps from multiple points by taking the max
-            gt_heatmap, _ = torch.max(all_heatmaps, dim=0)
+            gt_heatmap = torch.stack(all_heatmaps, dim=0).amax(dim=0)
 
         # --- 3. Finalize Output ---
         return {
